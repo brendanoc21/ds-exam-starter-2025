@@ -106,6 +106,10 @@ export class ExamStack extends cdk.Stack {
     });
 
     const queueA = new sqs.Queue(this, "queueA", {
+      deadLetterQueue: {
+        queue: queueB,
+        maxReceiveCount: 2,
+      },
       receiveMessageWaitTime: cdk.Duration.seconds(5),
     });
     
