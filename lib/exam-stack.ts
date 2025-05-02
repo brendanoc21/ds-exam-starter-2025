@@ -103,6 +103,7 @@ export class ExamStack extends cdk.Stack {
     
     const queueB = new sqs.Queue(this, "QueueB", {
       receiveMessageWaitTime: cdk.Duration.seconds(5),
+      retentionPeriod: cdk.Duration.minutes(5),
     });
 
     const queueA = new sqs.Queue(this, "queueA", {
