@@ -1,31 +1,66 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 
 const client = createDDbDocClient();
 
 export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
   try {
-    console.log("Event: ", JSON.stringify(event));
-
-    return {
-      statusCode: 200,
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({}),
-    };
-  } catch (error: any) {
-    console.log(JSON.stringify(error));
-    return {
-      statusCode: 500,
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ error }),
-    };
-  }
+        console.log("Event: ", event);
+    const pathParameters  = event?.pathParameters;
+        const crewRole = pathParameters?.crewRole;
+        const queryParams = event?.queryStringParameters;
+    
+        if (!crewRole) {
+          return {
+            statusCode: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({ Message: "Missing crew role" }),
+          };
+        }
+    
+        const commandOutput = await client.send(
+          new GetCommand({
+            TableName: process.env.TABLE_NAME,
+            Key: { role: crewRole },
+          })
+        );
+        console.log("GetCommand response: ", commandOutput);
+        if (!commandOutput.Item) {
+          return {
+            statusCode: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({ Message: "Invalid crew role" }),
+          };
+        }
+    
+        const body: { data: Record<string, any>; cast?: any[]} = {
+          data: commandOutput.Item,
+        };
+    
+        // Return Response
+        return {
+          statusCode: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify(body),
+        };
+      } catch (error: any) {
+        console.log(JSON.stringify(error));
+        return {
+          statusCode: 500,
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ error }),
+        };
+      }
 };
 
 function createDDbDocClient() {
@@ -40,4 +75,4 @@ function createDDbDocClient() {
   };
   const translateConfig = { marshallOptions, unmarshallOptions };
   return DynamoDBDocumentClient.from(ddbClient, translateConfig);
-}
+};
